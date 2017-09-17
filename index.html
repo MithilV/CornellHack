@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSSample</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+</head>
+<body>
+<p>Describe image</p>
+<textarea id="link" placeholder="Enter URL" required></textarea><br>
+<input type="submit" onclick="submitImage()" value="update">
+<br><br>
+<p>Read Image</p>
+<textarea id="OCRlink" placeholder="Enter URL" required></textarea><br>
+<input type="submit" onclick="submitOCR()" value="update">
+<p id="desc"></p>
+<script type="text/javascript">
+
+    function getObject(theObject) {
+        var result = "";
+        if(theObject instanceof Array) {
+            for(var i = 0; i < theObject.length; i++) {
+                result += getObject(theObject[i]);
+            }
+        }
+        else
+        {
+            console.log(theObject[prop]);
+            for(var prop in theObject) {
+                if(prop == "text") {
+                    return theObject[prop];
+                }
+                if(theObject[prop] instanceof Object || theObject[prop] instanceof Array) {
+                    result += getObject(theObject[prop]);
+                }
+            }
+        }
+        return result;
+    }
+    function subScript(theWord, theText) {
+      var word = null;
+      var wordStart = null;
+      if(theText.toLowerCase().indexOf(theWord) != -1){
+        wordStart = theText.toLowerCase().indexOf(theWord)+theWord.length;
+      }
+      else {
+        return;
+      }
+      word = theText.substring(wordStart);
+      var endChar = null;
+      if(theWord == "servingsize"){
+        endChar = "(";
+      }
+      else if(theWord == "sodium"){
+        endChar = "mg";
+      }
+      else {
+        endChar = "g";
+      }
+      var wordEnd = word.toLowerCase().indexOf(endChar);
+      return word.substring(0, wordEnd);
+    }
+    function submitOCR() {
+	$.ajax({
+            url: "https://eastus2.api.cognitive.microsoft.com/vision/v1.0/ocr",
+            beforeSend: function(xhrObj){
+              // Request headers
+              xhrObj.setRequestHeader("Content-Type","application/json");
+              xhrObj.setRequestHeader("Ocp-Apim-Subscription-Key","b1064f9da129404b9c13624c4c2a99ed");
+            },
+            type: "POST",
+            // Request body
+            data: '{"url": "'+document.getElementById("OCRlink").value+'"}',
+        })
+        .done(function(data) {
+            var text = getObject(data.regions);
+            var servingNum = subScript("servingsize", text).match(/\d+/);
+            var nutrition = "";
+            if(servingNum != null){
+              nutrition += "Serving Size Number: " + servingNum + "<br>";
+              nutrition += "Serving Size: " + servingNum + " " + subScript("servingsize", text).substring(servingNum.length) + "<br>";
+            }
+            else {
+              nutrition += "Serving Size Number: 1 <br>";
+            }
+            nutrition += "Sugar: " + subScript("sugars", text) + " grams" + "<br>";
+            nutrition += "Fat: " + subScript("totalfat", text) + " grams" + "<br>";
+            nutrition += "Sodium: " + subScript("sodium", text) + " milligrams";
+            document.getElementById("desc").innerHTML = nutrition;
+        })
+        .fail(function() {
+            alert("error");
+        });
+    }
+</script>
+</body>
+</html>
